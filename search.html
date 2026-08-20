@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Search — Ronin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Expanded:wght@700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F1016; --panel:#181A24; --panel-hi:#22242F; --line:#2C2E3A;
+    --paper:#F1EFE9; --paper-dim:#9C9CAA; --magenta:#FF3D7F; --cyan:#3FE0C5; --amber:#FFB84D; --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ background:var(--ink); color:var(--paper); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; }
+  .display{ font-family:'Archivo Expanded', sans-serif; font-weight:800; letter-spacing:-0.01em; }
+  .mono{ font-family:'IBM Plex Mono', monospace; letter-spacing:0.02em; }
+  a{ color:inherit; text-decoration:none; }
+  ::selection{ background:var(--magenta); color:var(--ink); }
+  a:focus-visible, button:focus-visible, input:focus-visible{ outline:2px solid var(--cyan); outline-offset:2px; }
+
+  nav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 40px; border-bottom:1px solid var(--line);
+    position:sticky; top:0; background:rgba(15,16,22,0.9); backdrop-filter:blur(10px); z-index:20;
+  }
+  .logo{ display:flex; align-items:center; gap:10px; font-size:20px; }
+  .logo-mark{ width:13px; height:13px; background:var(--magenta); clip-path:polygon(0 0, 100% 50%, 0 100%); }
+  .nav-links{ display:flex; gap:28px; font-size:13px; color:var(--paper-dim); }
+  .nav-links a:hover{ color:var(--paper); }
+  .avatar{ width:30px; height:30px; background:var(--cyan); border-radius:50%; }
+  @media (max-width:900px){ .nav-links{ display:none; } nav{ padding:16px 20px; } }
+
+  /* Search header */
+  .search-head{
+    padding:44px 40px 26px;
+    border-bottom:1px solid var(--line);
+    background:radial-gradient(ellipse at 80% 0%, rgba(255,61,127,0.1), transparent 55%);
+  }
+  .search-box{
+    display:flex; align-items:center; gap:12px;
+    max-width:640px;
+    background:var(--panel); border:1px solid var(--line);
+    padding:14px 18px; border-radius:var(--radius);
+  }
+  .search-box:focus-within{ border-color:var(--cyan); }
+  .search-box input{
+    flex:1; background:none; border:none; color:var(--paper); font-size:16px; font-family:inherit;
+  }
+  .search-box input:focus{ outline:none; }
+  .search-icon{ color:var(--paper-dim); font-size:15px; }
+  .search-clear{ background:none; border:none; color:var(--paper-dim); cursor:pointer; font-size:14px; display:none; }
+  .search-clear.show{ display:block; }
+
+  .filter-row{ display:flex; gap:10px; margin-top:20px; flex-wrap:wrap; }
+  .filter-chip{
+    font-size:12px; padding:7px 14px; border:1px solid var(--line); border-radius:20px;
+    color:var(--paper-dim); cursor:pointer; background:none; font-family:inherit;
+  }
+  .filter-chip:hover{ border-color:var(--paper-dim); color:var(--paper); }
+  .filter-chip.active{ background:var(--paper); color:var(--ink); border-color:var(--paper); }
+
+  /* Results */
+  .results-wrap{ padding:32px 40px 60px; }
+  .results-meta{ font-size:12px; color:var(--paper-dim); margin-bottom:22px; }
+  .results-meta .q{ color:var(--paper); }
+
+  .results-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:20px;
+  }
+  .card{ cursor:pointer; }
+  .card-art{
+    position:relative; height:260px; border-radius:var(--radius);
+    background:linear-gradient(155deg, var(--art-a), var(--art-b));
+    display:flex; align-items:flex-end; padding:14px; overflow:hidden;
+    border:1px solid var(--line); transition:transform .18s ease, border-color .18s ease;
+  }
+  .card:hover .card-art{ transform:translateY(-6px); border-color:var(--cyan); }
+  .card-art::after{ content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 100%); }
+  .card-ep{ position:relative; z-index:1; font-size:11px; padding:3px 8px; background:rgba(15,16,22,0.75); border:1px solid rgba(255,255,255,0.2); align-self:flex-start; margin-top:auto; }
+  .card-glyph{ position:absolute; top:14px; right:14px; z-index:1; font-size:32px; font-weight:800; opacity:0.35; }
+  .card-name{ margin-top:12px; font-size:14px; font-weight:600; }
+  .card-tag{ font-size:11px; color:var(--paper-dim); margin-top:3px; }
+  .card-match{ font-size:10px; color:var(--cyan); margin-top:4px; }
+
+  .empty-state{
+    text-align:center; padding:80px 20px; color:var(--paper-dim);
+  }
+  .empty-state .big{ font-size:22px; color:var(--paper); margin-bottom:10px; }
+  .empty-state .sug{ font-size:13px; margin-top:18px; }
+  .empty-state .sug a{ color:var(--cyan); cursor:pointer; }
+</style>
+<script src="supabaseClient.js"></script>
+</head>
+<body>
+
+<nav>
+  <a href="index.html"><div class="logo"><span class="logo-mark"></span><span class="display">RONIN</span></div></a>
+  <div class="nav-links">
+    <a href="index.html#schedule">Schedule</a>
+    <a href="index.html#catalog">Browse</a>
+    <a href="#">Movies</a>
+    <a href="#">My List</a>
+  </div>
+  <a href="login.html" id="navAvatarLink"><div class="avatar"></div></a>
+</nav>
+
+<div class="search-head">
+  <div class="search-box">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="Search titles, genres…" autofocus>
+    <button class="search-clear" id="clearBtn" onclick="clearSearch()">✕</button>
+  </div>
+  <div class="filter-row" id="filterRow"></div>
+</div>
+
+<div class="results-wrap">
+  <div class="results-meta" id="resultsMeta"></div>
+  <div class="results-grid" id="resultsGrid"></div>
+</div>
+
+<script>
+let shows = [];
+let genres = ["All"];
+let activeGenre = "All";
+
+function cardHTML(s, matchLabel){
+  return `<div class="card" onclick="openTitle('${s.t}')">
+    <div class="card-art" style="--art-a:${s.a}; --art-b:${s.b};">
+      <div class="card-glyph">${s.glyph}</div>
+      <div class="card-ep mono">${s.ep}</div>
+    </div>
+    <div class="card-name">${s.t}</div>
+    <div class="card-tag">${s.tag}</div>
+    ${matchLabel ? `<div class="card-match mono">${matchLabel}</div>` : ''}
+  </div>`;
+}
+
+function openTitle(t){
+  location.href = 'watch.html?t=' + encodeURIComponent(t);
+}
+
+function runSearch(){
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  document.getElementById('clearBtn').classList.toggle('show', q.length > 0);
+
+  let results = shows.filter(s => {
+    const matchesGenre = activeGenre === "All" || s.genre === activeGenre;
+    const matchesQuery = q === "" ||
+      s.t.toLowerCase().includes(q) ||
+      s.tag.toLowerCase().includes(q) ||
+      s.genre.toLowerCase().includes(q) ||
+      s.desc.toLowerCase().includes(q);
+    return matchesGenre && matchesQuery;
+  });
+
+  const meta = document.getElementById('resultsMeta');
+  const grid = document.getElementById('resultsGrid');
+
+  if(results.length === 0){
+    meta.textContent = '';
+    grid.innerHTML = '';
+    document.getElementById('resultsWrapEmpty');
+    grid.parentElement.querySelector('.empty-state')?.remove();
+    grid.insertAdjacentHTML('afterend', `
+      <div class="empty-state">
+        <div class="big">No matches for "${q}"</div>
+        <div>Try a different title, or browse by genre instead.</div>
+        <div class="sug">Try: <a onclick="quickSearch('mecha')">mecha</a> · <a onclick="quickSearch('romance')">romance</a> · <a onclick="quickSearch('horror')">horror</a></div>
+      </div>`);
+    return;
+  }
+
+  document.querySelector('.empty-state')?.remove();
+  meta.innerHTML = q
+    ? `${results.length} result${results.length!==1?'s':''} for <span class="q">"${q}"</span>`
+    : (activeGenre === "All" ? `Showing all ${results.length} titles` : `${results.length} title${results.length!==1?'s':''} in ${activeGenre}`);
+  grid.innerHTML = results.map(s => cardHTML(s, q ? matchLabel(s, q) : null)).join('');
+}
+
+function matchLabel(s, q){
+  if(s.t.toLowerCase().includes(q)) return 'MATCHED TITLE';
+  if(s.genre.toLowerCase().includes(q)) return 'MATCHED GENRE';
+  return 'MATCHED DESCRIPTION';
+}
+
+function quickSearch(term){
+  document.getElementById('searchInput').value = term;
+  runSearch();
+}
+
+function clearSearch(){
+  document.getElementById('searchInput').value = '';
+  runSearch();
+  document.getElementById('searchInput').focus();
+}
+
+function renderFilterRow(){
+  document.getElementById('filterRow').innerHTML = genres.map(g =>
+    `<button class="filter-chip ${g===activeGenre?'active':''}" data-genre="${g}" onclick="selectGenre('${g}')">${g}</button>`
+  ).join('');
+}
+
+function selectGenre(g){
+  activeGenre = g;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c.dataset.genre === g));
+  runSearch();
+}
+
+document.getElementById('searchInput').addEventListener('input', runSearch);
+
+if(sessionStorage.getItem('ronin_session')){
+  document.getElementById('navAvatarLink').setAttribute('href', 'profile.html');
+}
+
+async function init(){
+  document.getElementById('resultsMeta').textContent = 'Loading catalog…';
+  try{
+    shows = await fetchShows();
+  } catch(err){
+    console.error(err);
+    document.getElementById('resultsMeta').textContent = '';
+    document.getElementById('resultsGrid').innerHTML = `<div class="mono" style="color:var(--paper-dim); font-size:12px;">Couldn't load the catalog. Check your connection and refresh.</div>`;
+    return;
+  }
+
+  genres = ["All", ...Array.from(new Set(shows.map(s => s.genre).filter(Boolean)))];
+  renderFilterRow();
+
+  // Pick up ?q= from the homepage search bar, if present
+  const params = new URLSearchParams(window.location.search);
+  if(params.get('q')){
+    document.getElementById('searchInput').value = params.get('q');
+  }
+
+  runSearch();
+}
+
+init();
+</script>
+</body>
+</html>

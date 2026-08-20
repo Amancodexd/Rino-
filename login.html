@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign in — Ronin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Expanded:wght@700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F1016; --panel:#181A24; --panel-hi:#22242F; --line:#2C2E3A;
+    --paper:#F1EFE9; --paper-dim:#9C9CAA; --magenta:#FF3D7F; --cyan:#3FE0C5; --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--ink); color:var(--paper); font-family:'Inter',sans-serif;
+    min-height:100vh; display:flex; -webkit-font-smoothing:antialiased;
+  }
+  .display{ font-family:'Archivo Expanded', sans-serif; font-weight:800; }
+  .mono{ font-family:'IBM Plex Mono', monospace; letter-spacing:0.02em; }
+  a{ color:inherit; }
+  ::selection{ background:var(--magenta); color:var(--ink); }
+  a:focus-visible, button:focus-visible, input:focus-visible{ outline:2px solid var(--cyan); outline-offset:2px; }
+
+  .visual{
+    flex:1.1; position:relative; display:none;
+    background:
+      radial-gradient(ellipse at 75% 20%, rgba(255,61,127,0.25), transparent 45%),
+      radial-gradient(ellipse at 20% 75%, rgba(63,224,197,0.16), transparent 40%),
+      linear-gradient(135deg, #241627 0%, #14161f 55%, #0f1016 100%);
+    padding:48px;
+    flex-direction:column; justify-content:space-between;
+  }
+  @media (min-width:860px){ .visual{ display:flex; } }
+  .visual-logo{ display:flex; align-items:center; gap:10px; font-size:20px; }
+  .logo-mark{ width:13px; height:13px; background:var(--magenta); clip-path:polygon(0 0, 100% 50%, 0 100%); }
+  .visual-quote{ max-width:380px; }
+  .visual-quote .line{ font-size:34px; line-height:1.15; margin-bottom:14px; }
+  .visual-quote .sub{ font-size:13px; color:var(--paper-dim); }
+
+  .form-side{
+    flex:1; display:flex; align-items:center; justify-content:center; padding:40px 24px;
+  }
+  .form-wrap{ width:100%; max-width:360px; }
+  .form-eyebrow{ font-size:11px; color:var(--paper-dim); margin-bottom:8px; }
+  .form-title{ font-size:30px; margin-bottom:28px; }
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:12px; color:var(--paper-dim); margin-bottom:6px; }
+  .field input{
+    width:100%; background:var(--panel); border:1px solid var(--line); color:var(--paper);
+    padding:13px 14px; font-size:14px; border-radius:var(--radius); font-family:inherit;
+  }
+  .field input:focus{ border-color:var(--cyan); outline:none; }
+  .row-between{ display:flex; justify-content:space-between; align-items:center; font-size:12px; margin:6px 0 24px; color:var(--paper-dim); }
+  .row-between a:hover{ color:var(--paper); }
+  .check-row{ display:flex; align-items:center; gap:8px; }
+
+  .btn-primary{
+    width:100%; padding:14px; background:var(--paper); color:var(--ink); border:none;
+    font-size:14px; font-weight:600; border-radius:var(--radius); cursor:pointer;
+    transition:background .15s ease, transform .15s ease;
+  }
+  .btn-primary:hover{ background:#fff; transform:translateY(-1px); }
+
+  .divider{ display:flex; align-items:center; gap:12px; margin:24px 0; font-size:11px; color:var(--paper-dim); }
+  .divider::before, .divider::after{ content:""; flex:1; height:1px; background:var(--line); }
+
+  .oauth{
+    display:flex; gap:10px;
+  }
+  .oauth button{
+    flex:1; padding:11px; background:var(--panel); border:1px solid var(--line); color:var(--paper);
+    font-size:13px; border-radius:var(--radius); cursor:pointer; font-family:inherit;
+  }
+  .oauth button:hover{ background:var(--panel-hi); }
+
+  .switch{ margin-top:28px; font-size:13px; color:var(--paper-dim); text-align:center; }
+  .switch a{ color:var(--cyan); }
+
+  .err{
+    display:none; background:rgba(255,61,127,0.1); border:1px solid var(--magenta);
+    color:#ff9dbd; font-size:12px; padding:10px 12px; border-radius:var(--radius); margin-bottom:16px;
+  }
+  .err.show{ display:block; }
+</style>
+</head>
+<body>
+
+  <div class="visual">
+    <div class="visual-logo"><span class="logo-mark"></span><span class="display">RONIN</span></div>
+    <div class="visual-quote">
+      <div class="line display">Every Friday, something new goes live.</div>
+      <div class="sub">Pick up exactly where you left off, across every device.</div>
+    </div>
+  </div>
+
+  <div class="form-side">
+    <div class="form-wrap">
+      <div class="form-eyebrow mono">WELCOME BACK</div>
+      <div class="form-title display">Sign in</div>
+
+      <div class="err" id="formErr"></div>
+
+      <form id="loginForm" onsubmit="return handleLogin(event)">
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="you@example.com" required>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="••••••••" required minlength="6">
+        </div>
+        <div class="row-between">
+          <label class="check-row"><input type="checkbox" checked> Stay signed in</label>
+          <a href="#">Forgot password?</a>
+        </div>
+        <button type="submit" class="btn-primary">Sign in</button>
+      </form>
+
+      <div class="divider">OR CONTINUE WITH</div>
+      <div class="oauth">
+        <button type="button">Google</button>
+        <button type="button">Apple</button>
+      </div>
+
+      <div class="switch">New to Ronin? <a href="signup.html">Create an account</a></div>
+    </div>
+  </div>
+
+<script>
+  // Demo-only auth: checks against accounts created on the signup page
+  // (localStorage). If no accounts exist yet, falls back to accepting any
+  // 6+ character password so the flow still works standalone.
+  function handleLogin(e){
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    const password = document.getElementById('password').value;
+    const err = document.getElementById('formErr');
+
+    if(password.length < 6){
+      err.textContent = 'Password must be at least 6 characters.';
+      err.classList.add('show');
+      return false;
+    }
+
+    const users = JSON.parse(localStorage.getItem('ronin_users') || '{}');
+    const hasAnyUsers = Object.keys(users).length > 0;
+
+    if(hasAnyUsers && !users[email]){
+      err.textContent = "That email and password don't match an account.";
+      err.classList.add('show');
+      return false;
+    }
+    err.classList.remove('show');
+
+    const name = users[email] ? users[email].name : email.split('@')[0];
+    const session = { email, name, signedInAt: Date.now() };
+    sessionStorage.setItem('ronin_session', JSON.stringify(session));
+    window.location.href = 'profile.html';
+    return false;
+  }
+</script>
+</body>
+</html>

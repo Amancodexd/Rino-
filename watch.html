@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Watch — Ronin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Expanded:wght@700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F1016; --panel:#181A24; --panel-hi:#22242F; --line:#2C2E3A;
+    --paper:#F1EFE9; --paper-dim:#9C9CAA; --magenta:#FF3D7F; --cyan:#3FE0C5; --amber:#FFB84D; --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ background:var(--ink); color:var(--paper); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; }
+  .display{ font-family:'Archivo Expanded', sans-serif; font-weight:800; letter-spacing:-0.01em; }
+  .mono{ font-family:'IBM Plex Mono', monospace; letter-spacing:0.02em; }
+  a{ color:inherit; text-decoration:none; }
+  ::selection{ background:var(--magenta); color:var(--ink); }
+  a:focus-visible, button:focus-visible{ outline:2px solid var(--cyan); outline-offset:2px; }
+
+  nav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 40px; border-bottom:1px solid var(--line);
+    position:sticky; top:0; background:rgba(15,16,22,0.92); backdrop-filter:blur(10px); z-index:30;
+  }
+  .logo{ display:flex; align-items:center; gap:10px; font-size:20px; }
+  .logo-mark{ width:13px; height:13px; background:var(--magenta); clip-path:polygon(0 0, 100% 50%, 0 100%); }
+  .back-link{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--paper-dim); cursor:pointer; }
+  .back-link:hover{ color:var(--paper); }
+  .avatar{ width:30px; height:30px; background:var(--cyan); border-radius:50%; }
+
+  /* Player */
+  .player-wrap{
+    background:#000;
+    display:flex; align-items:center; justify-content:center;
+    position:relative;
+    aspect-ratio:16/9;
+    max-height:72vh;
+  }
+  .player-art{
+    position:absolute; inset:0;
+    background:linear-gradient(155deg, var(--a), var(--b));
+  }
+  .player-art::after{
+    content:""; position:absolute; inset:0;
+    background:radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.35) 100%);
+  }
+  .play-ring{
+    position:relative; z-index:2;
+    width:76px; height:76px; border-radius:50%; border:2px solid var(--paper);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:22px;
+    background:rgba(15,16,22,0.35);
+    transition:transform .15s ease, background .15s ease;
+  }
+  .play-ring:hover{ transform:scale(1.06); background:rgba(15,16,22,0.55); }
+  .ep-badge-onplayer{
+    position:absolute; top:16px; left:16px; z-index:2;
+    font-size:11px; padding:5px 10px; background:rgba(15,16,22,0.7); border:1px solid rgba(255,255,255,0.2);
+  }
+
+  .scrubber{
+    position:absolute; bottom:0; left:0; right:0; z-index:2;
+    height:4px; background:rgba(255,255,255,0.15);
+  }
+  .scrubber-fill{ height:100%; width:0%; background:var(--magenta); transition:width .3s linear; }
+
+  /* Info row */
+  .watch-body{ max-width:1100px; margin:0 auto; padding:28px 40px 60px; }
+  .info-row{ display:flex; justify-content:space-between; align-items:flex-start; gap:24px; flex-wrap:wrap; margin-bottom:8px; }
+  .watch-title{ font-size:26px; margin-bottom:8px; }
+  .watch-ep-label{ font-size:13px; color:var(--cyan); margin-bottom:14px; }
+  .watch-meta{ display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap; }
+  .pill{ font-size:11px; border:1px solid var(--line); padding:4px 10px; border-radius:var(--radius); color:var(--paper-dim); }
+  .watch-desc{ font-size:14px; color:var(--paper-dim); line-height:1.7; max-width:640px; }
+
+  .action-col{ display:flex; gap:10px; flex-shrink:0; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:11px 18px; font-size:13px; font-weight:600;
+    border-radius:var(--radius); cursor:pointer; border:1px solid var(--line);
+    background:var(--panel); color:var(--paper);
+  }
+  .btn:hover{ background:var(--panel-hi); }
+  .btn-primary{ background:var(--paper); color:var(--ink); border-color:var(--paper); }
+  .btn-primary:hover{ background:#fff; }
+
+  /* Episodes */
+  .section-title{ font-size:18px; margin:36px 0 16px; }
+  .ep-list{ display:flex; flex-direction:column; gap:1px; background:var(--line); border:1px solid var(--line); }
+  .ep-row{
+    display:flex; align-items:center; gap:16px; padding:14px 16px; background:var(--panel); cursor:pointer;
+  }
+  .ep-row:hover{ background:var(--panel-hi); }
+  .ep-row.active{ background:var(--panel-hi); box-shadow:inset 3px 0 0 var(--magenta); }
+  .ep-num{ font-size:14px; width:28px; color:var(--paper-dim); flex-shrink:0; }
+  .ep-row.active .ep-num{ color:var(--magenta); }
+  .ep-thumb{
+    width:80px; height:46px; border-radius:var(--radius); flex-shrink:0;
+    background:linear-gradient(155deg, var(--a), var(--b));
+  }
+  .ep-info{ flex:1; min-width:0; }
+  .ep-title{ font-size:13px; font-weight:600; margin-bottom:2px; }
+  .ep-sub{ font-size:11px; color:var(--paper-dim); }
+  .ep-dur{ font-size:11px; color:var(--paper-dim); flex-shrink:0; }
+
+  /* You might also like */
+  .rel-shelf{ display:flex; gap:16px; overflow-x:auto; padding-bottom:8px; }
+  .rel-card{ flex:0 0 150px; cursor:pointer; }
+  .rel-art{
+    height:200px; border-radius:var(--radius); border:1px solid var(--line);
+    background:linear-gradient(155deg, var(--a), var(--b));
+    transition:transform .18s ease, border-color .18s ease;
+    display:flex; align-items:flex-start; justify-content:flex-end; padding:10px;
+  }
+  .rel-card:hover .rel-art{ transform:translateY(-5px); border-color:var(--cyan); }
+  .rel-glyph{ font-size:22px; font-weight:800; opacity:0.35; }
+  .rel-name{ font-size:12px; font-weight:600; margin-top:8px; }
+
+  .not-found{ text-align:center; padding:100px 20px; color:var(--paper-dim); }
+  .not-found .big{ font-size:22px; color:var(--paper); margin-bottom:10px; }
+</style>
+<script src="supabaseClient.js"></script>
+</head>
+<body>
+
+<nav>
+  <a href="index.html"><div class="logo"><span class="logo-mark"></span><span class="display">RONIN</span></div></a>
+  <a class="back-link" href="javascript:history.length>1?history.back():location.href='index.html'">← Back to browse</a>
+  <a href="login.html" id="navAvatarLink"><div class="avatar"></div></a>
+</nav>
+
+<div id="app"></div>
+
+<script>
+let catalog = [];
+let show = null;
+let currentEp = 1;
+
+const params = new URLSearchParams(window.location.search);
+const titleParam = params.get('t');
+const epParam = parseInt(params.get('ep') || '1', 10);
+
+function epList(){
+  return Array.from({length: show.eps}, (_, i) => i + 1).map(n => `
+    <div class="ep-row ${n===currentEp?'active':''}" onclick="goToEpisode(${n})">
+      <div class="ep-num mono">${String(n).padStart(2,'0')}</div>
+      <div class="ep-thumb" style="--a:${show.a}; --b:${show.b};"></div>
+      <div class="ep-info">
+        <div class="ep-title">Episode ${n}</div>
+        <div class="ep-sub">${n===currentEp ? "Now playing" : n < currentEp ? "Watched" : ""}</div>
+      </div>
+      <div class="ep-dur mono">23m</div>
+    </div>
+  `).join('');
+}
+
+function relatedShelf(){
+  const others = catalog.filter(c => c.t !== show.t).sort(() => 0.5 - Math.random()).slice(0, 6);
+  return others.map(c => `
+    <div class="rel-card" onclick="location.href='watch.html?t=${encodeURIComponent(c.t)}'">
+      <div class="rel-art" style="--a:${c.a}; --b:${c.b};"><div class="rel-glyph">${c.glyph}</div></div>
+      <div class="rel-name">${c.t}</div>
+    </div>
+  `).join('');
+}
+
+function render(){
+  document.getElementById('app').innerHTML = `
+    <div class="player-wrap" id="playerWrap" style="--a:${show.a}; --b:${show.b};">
+      <div class="player-art"></div>
+      <div class="ep-badge-onplayer mono">EP ${currentEp}</div>
+      <div class="play-ring" id="playRing" onclick="togglePlay()">▶</div>
+      <div class="scrubber"><div class="scrubber-fill" id="scrubberFill"></div></div>
+    </div>
+
+    <div class="watch-body">
+      <div class="info-row">
+        <div>
+          <div class="watch-title display">${show.t}</div>
+          <div class="watch-ep-label mono">EPISODE ${currentEp} OF ${show.eps}</div>
+          <div class="watch-meta">
+            <span class="pill">${show.tag}</span>
+            <span class="pill mono">${show.rating}</span>
+            <span class="pill mono">${show.eps} EPISODES</span>
+          </div>
+          <div class="watch-desc">${show.desc}</div>
+        </div>
+        <div class="action-col">
+          <button class="btn btn-primary" onclick="togglePlay()">▶ Play</button>
+          <button class="btn" onclick="addToList()">+ My List</button>
+        </div>
+      </div>
+
+      <div class="section-title display">Episodes</div>
+      <div class="ep-list">${epList()}</div>
+
+      <div class="section-title display">You might also like</div>
+      <div class="rel-shelf">${relatedShelf()}</div>
+    </div>
+  `;
+}
+
+function goToEpisode(n){
+  location.href = `watch.html?t=${encodeURIComponent(show.t)}&ep=${n}`;
+}
+
+async function init(){
+  document.getElementById('app').innerHTML = `<div style="padding:100px 20px; text-align:center; color:var(--paper-dim);">Loading…</div>`;
+  try{
+    catalog = await fetchShows();
+  } catch(err){
+    console.error(err);
+    document.getElementById('app').innerHTML = `<div class="not-found"><div class="big">Couldn't load the catalog</div><div>Check your connection and refresh.</div></div>`;
+    return;
+  }
+
+  if(catalog.length === 0){
+    document.getElementById('app').innerHTML = `<div class="not-found"><div class="big">No titles yet</div><div>Add some from the admin panel.</div></div>`;
+    return;
+  }
+
+  show = catalog.find(c => c.t === titleParam) || catalog[0];
+  currentEp = Math.min(Math.max(epParam, 1), show.eps);
+  document.title = show.t + ' — Ronin';
+
+  render();
+}
+
+let playing = false;
+let scrubTimer = null;
+function togglePlay(){
+  playing = !playing;
+  document.getElementById('playRing').textContent = playing ? '❚❚' : '▶';
+  if(playing){
+    let pct = 0;
+    scrubTimer = setInterval(() => {
+      pct += 0.4;
+      if(pct >= 100) pct = 100;
+      document.getElementById('scrubberFill').style.width = pct + '%';
+    }, 100);
+  } else {
+    clearInterval(scrubTimer);
+  }
+}
+
+function addToList(){
+  const raw = sessionStorage.getItem('ronin_session');
+  if(!raw){
+    alert('Sign in to add titles to your list.');
+    location.href = 'login.html';
+    return;
+  }
+  const session = JSON.parse(raw);
+  const listKey = 'ronin_list_' + session.email;
+  const myList = JSON.parse(localStorage.getItem(listKey) || '{}');
+  myList[show.t] = myList[show.t] || 'Plan to Watch';
+  localStorage.setItem(listKey, JSON.stringify(myList));
+  alert(`Added "${show.t}" to your list (${myList[show.t]}).`);
+}
+
+if(sessionStorage.getItem('ronin_session')){
+  document.getElementById('navAvatarLink').setAttribute('href', 'profile.html');
+}
+
+init();
+</script>
+</body>
+</html>

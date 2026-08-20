@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ronin — Watch what's airing now</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Expanded:wght@700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F1016;
+    --panel:#181A24;
+    --panel-hi:#22242F;
+    --line:#2C2E3A;
+    --paper:#F1EFE9;
+    --paper-dim:#9C9CAA;
+    --magenta:#FF3D7F;
+    --cyan:#3FE0C5;
+    --amber:#FFB84D;
+    --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  .display{ font-family:'Archivo Expanded', sans-serif; font-weight:800; letter-spacing:-0.01em; }
+  .mono{ font-family:'IBM Plex Mono', monospace; letter-spacing:0.02em; }
+  a{color:inherit; text-decoration:none;}
+  ::selection{ background:var(--magenta); color:var(--ink); }
+
+  /* Focus visibility */
+  a:focus-visible, button:focus-visible{ outline:2px solid var(--cyan); outline-offset:3px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
+  }
+
+  /* ---------- NAV ---------- */
+  nav{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 40px;
+    background:rgba(15,16,22,0.85);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .logo{ display:flex; align-items:center; gap:10px; font-size:22px; }
+  .logo-mark{
+    width:14px; height:14px; background:var(--magenta);
+    clip-path:polygon(0 0, 100% 50%, 0 100%);
+  }
+  .nav-links{ display:flex; gap:32px; font-size:14px; color:var(--paper-dim); }
+  .nav-links a:hover{ color:var(--paper); }
+  .nav-right{ display:flex; align-items:center; gap:20px; }
+  .search-btn{
+    display:flex; align-items:center; gap:8px;
+    background:var(--panel); border:1px solid var(--line);
+    padding:8px 14px; border-radius:var(--radius); font-size:13px; color:var(--paper-dim);
+    cursor:pointer;
+  }
+  .avatar{ width:30px; height:30px; background:var(--cyan); border-radius:50%; }
+  @media (max-width:900px){ .nav-links{ display:none; } nav{ padding:16px 20px; } }
+
+  /* ---------- BROADCAST TICKER (signature element) ---------- */
+  .ticker-wrap{
+    border-bottom:1px solid var(--line);
+    background:var(--panel);
+    overflow:hidden;
+  }
+  .ticker-head{
+    display:flex; align-items:center; gap:10px;
+    padding:10px 40px 0;
+    font-size:11px; color:var(--paper-dim);
+  }
+  .live-dot{
+    width:7px; height:7px; border-radius:50%; background:var(--magenta);
+    animation:pulse 1.6s infinite;
+  }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+  .ticker{
+    display:flex; gap:0; padding:12px 0; overflow-x:auto; scrollbar-width:none;
+  }
+  .ticker::-webkit-scrollbar{ display:none; }
+  .tick{
+    flex:0 0 auto;
+    display:flex; align-items:center; gap:14px;
+    padding:0 28px;
+    border-right:1px solid var(--line);
+    white-space:nowrap;
+    cursor:pointer;
+  }
+  .tick:first-child{ padding-left:40px; }
+  .tick-time{ font-size:12px; color:var(--cyan); }
+  .tick-time.now{ color:var(--magenta); }
+  .tick-title{ font-size:14px; font-weight:600; }
+  .tick-ep{ font-size:11px; color:var(--paper-dim); }
+
+  /* ---------- HERO ---------- */
+  .hero{
+    position:relative;
+    min-height:78vh;
+    display:flex; align-items:flex-end;
+    padding:60px 40px 56px;
+    background:
+      linear-gradient(180deg, rgba(15,16,22,0) 0%, rgba(15,16,22,0.5) 55%, var(--ink) 100%),
+      linear-gradient(120deg, #241627 0%, #14161f 55%, #0f1016 100%);
+    border-bottom:1px solid var(--line);
+  }
+  .hero::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image:
+      radial-gradient(ellipse at 78% 25%, rgba(255,61,127,0.22), transparent 45%),
+      radial-gradient(ellipse at 15% 70%, rgba(63,224,197,0.14), transparent 40%);
+    pointer-events:none;
+  }
+  .hero-inner{ position:relative; max-width:640px; }
+  .eyebrow{
+    display:flex; align-items:center; gap:8px;
+    font-size:12px; color:var(--amber);
+    margin-bottom:18px;
+  }
+  .eyebrow .bar{ width:24px; height:2px; background:var(--amber); }
+  .hero h1{
+    font-size:clamp(38px, 5.4vw, 72px);
+    line-height:0.98;
+    margin-bottom:20px;
+  }
+  .hero p{ font-size:16px; color:var(--paper-dim); max-width:480px; margin-bottom:30px; line-height:1.6; }
+  .hero-meta{ display:flex; gap:18px; align-items:center; margin-bottom:32px; font-size:13px; color:var(--paper-dim); }
+  .pill{
+    border:1px solid var(--line); padding:4px 10px; border-radius:var(--radius); font-size:12px;
+  }
+  .cta-row{ display:flex; gap:14px; }
+  .btn{
+    display:inline-flex; align-items:center; gap:10px;
+    padding:14px 26px; font-size:14px; font-weight:600;
+    border-radius:var(--radius); cursor:pointer; border:1px solid transparent;
+    transition:transform .15s ease, background .15s ease;
+  }
+  .btn:hover{ transform:translateY(-2px); }
+  .btn-primary{ background:var(--paper); color:var(--ink); }
+  .btn-primary:hover{ background:#fff; }
+  .btn-ghost{ background:rgba(255,255,255,0.06); color:var(--paper); border-color:var(--line); }
+  .btn-ghost:hover{ background:rgba(255,255,255,0.1); }
+
+  /* ---------- SECTIONS ---------- */
+  .section{ padding:56px 40px; }
+  .section-head{
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin-bottom:22px;
+  }
+  .section-title{ font-size:22px; }
+  .section-sub{ font-size:12px; color:var(--paper-dim); }
+
+  .shelf{
+    display:flex; gap:18px; overflow-x:auto; padding-bottom:10px; scrollbar-width:none;
+  }
+  .shelf::-webkit-scrollbar{ display:none; }
+  .card{
+    flex:0 0 200px;
+    cursor:pointer;
+  }
+  .card-art{
+    position:relative;
+    height:280px; border-radius:var(--radius);
+    background:linear-gradient(155deg, var(--art-a), var(--art-b));
+    display:flex; align-items:flex-end; padding:14px;
+    overflow:hidden;
+    border:1px solid var(--line);
+    transition:transform .2s ease, border-color .2s ease;
+  }
+  .card:hover .card-art{ transform:translateY(-6px); border-color:var(--cyan); }
+  .card-art::after{
+    content:"";
+    position:absolute; inset:0;
+    background:linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 100%);
+  }
+  .card-ep{
+    position:relative; z-index:1;
+    font-size:11px; padding:3px 8px;
+    background:rgba(15,16,22,0.75); border:1px solid rgba(255,255,255,0.2);
+    align-self:flex-start; margin-top:auto;
+  }
+  .card-glyph{
+    position:absolute; top:14px; right:14px; z-index:1;
+    font-size:34px; font-weight:800; opacity:0.35;
+  }
+  .card-name{ margin-top:12px; font-size:14px; font-weight:600; }
+  .card-tag{ font-size:11px; color:var(--paper-dim); margin-top:3px; }
+
+  /* ---------- SCHEDULE RAIL ---------- */
+  .sched-rail{
+    display:flex; gap:14px; overflow-x:auto; padding:6px 6px 20px 2px;
+    scroll-snap-type:x proximity;
+  }
+  .sched-rail::-webkit-scrollbar{ height:6px; }
+  .sched-rail::-webkit-scrollbar-thumb{ background:var(--line); border-radius:3px; }
+  .day-card{
+    flex:0 0 172px;
+    scroll-snap-align:start;
+    background:var(--panel);
+    border:1px solid var(--line);
+    display:flex; flex-direction:column;
+    transition:transform .18s ease, border-color .18s ease;
+    cursor:pointer;
+  }
+  .day-card:hover{ transform:translateY(-6px); border-color:var(--cyan); }
+  .day-card.today{ flex:0 0 208px; border-color:var(--magenta); }
+  .day-card-head{
+    padding:14px 16px 12px;
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom:1px solid var(--line);
+  }
+  .day-card-name{ font-size:13px; }
+  .day-card.today .day-card-name{ color:var(--magenta); }
+  .day-card-count{ font-size:10px; color:var(--paper-dim); }
+  .day-card-art{
+    height:130px;
+    background:linear-gradient(155deg, var(--art-a), var(--art-b));
+    position:relative;
+    display:flex; align-items:flex-end; padding:10px;
+  }
+  .day-card.today .day-card-art{ height:170px; }
+  .day-card-art::after{
+    content:""; position:absolute; inset:0;
+    background:linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,.6) 100%);
+  }
+  .day-card-glyph{ position:absolute; top:10px; right:12px; font-size:26px; font-weight:800; opacity:.35; z-index:1; }
+  .day-card-time{ position:relative; z-index:1; font-size:11px; color:var(--cyan); }
+  .day-card-body{ padding:12px 16px 16px; }
+  .day-card-title{ font-size:13px; font-weight:600; margin-bottom:4px; }
+  .day-card-tag{ font-size:11px; color:var(--paper-dim); }
+  .day-card-empty{
+    flex:1; display:flex; align-items:center; justify-content:center;
+    color:var(--paper-dim); font-size:11px; padding:30px 10px;
+  }
+  .sched-hint{ font-size:11px; color:var(--paper-dim); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+  .sched-hint .arrow{ display:inline-block; animation:nudge 1.4s infinite; }
+  @keyframes nudge{ 0%,100%{ transform:translateX(0);} 50%{ transform:translateX(4px);} }
+
+  /* ---------- FOOTER ---------- */
+  footer{
+    padding:40px; border-top:1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:12px; color:var(--paper-dim); flex-wrap:wrap; gap:14px;
+  }
+
+  /* ---------- MODAL PLAYER ---------- */
+  .modal-bg{
+    position:fixed; inset:0; background:rgba(10,10,14,0.85);
+    display:none; align-items:center; justify-content:center; z-index:100; padding:20px;
+  }
+  .modal-bg.open{ display:flex; }
+  .modal{
+    width:min(820px, 100%); background:var(--panel); border:1px solid var(--line);
+    overflow:hidden;
+  }
+  .player{
+    height:420px; background:linear-gradient(155deg, var(--art-a,#3a2140), var(--art-b,#141018));
+    display:flex; align-items:center; justify-content:center; position:relative;
+  }
+  .play-ring{
+    width:64px; height:64px; border-radius:50%; border:2px solid var(--paper);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .play-ring:hover{ background:rgba(255,255,255,0.1); }
+  .modal-body{ padding:24px 26px; }
+  .modal-title{ font-size:22px; margin-bottom:8px; }
+  .modal-desc{ font-size:13px; color:var(--paper-dim); line-height:1.6; margin-bottom:16px; }
+  .close-btn{
+    position:absolute; top:16px; right:16px; z-index:2;
+    width:32px; height:32px; border-radius:50%;
+    background:rgba(15,16,22,0.6); border:1px solid rgba(255,255,255,0.2);
+    color:var(--paper); cursor:pointer; font-size:14px;
+  }
+  .ep-row{ display:flex; gap:10px; overflow-x:auto; padding-top:6px; }
+  .ep-chip{
+    flex:0 0 auto; padding:8px 12px; border:1px solid var(--line); font-size:12px;
+    cursor:pointer; color:var(--paper-dim);
+  }
+  .ep-chip.active{ border-color:var(--cyan); color:var(--paper); }
+</style>
+<script src="supabaseClient.js"></script>
+</head>
+<body>
+
+<nav>
+  <div class="logo"><span class="logo-mark"></span><span class="display">RONIN</span></div>
+  <div class="nav-links">
+    <a href="#schedule">Schedule</a>
+    <a href="#catalog">Browse</a>
+    <a href="#">Movies</a>
+    <a href="#">My List</a>
+  </div>
+  <div class="nav-right">
+    <div class="search-btn" onclick="location.href='search.html'">🔍 <span id="searchLabel">Search titles…</span></div>
+    <a href="login.html" id="navAvatarLink" title="Sign in"><div class="avatar"></div></a>
+  </div>
+</nav>
+
+<div class="ticker-wrap">
+  <div class="ticker-head"><span class="live-dot"></span> NOW SIMULCASTING</div>
+  <div class="ticker" id="ticker"></div>
+</div>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div class="eyebrow"><span class="bar"></span> SPOTLIGHT · EP 12 OUT NOW</div>
+    <h1 class="display">Iron Requiem</h1>
+    <p>A disgraced mecha pilot is dragged back into the war she deserted, only to find the front lines are being run by the machine she left for dead. Season 2 airs every Friday.</p>
+    <div class="hero-meta">
+      <span class="pill">Mecha</span>
+      <span class="pill">War Drama</span>
+      <span class="pill mono">16+</span>
+      <span class="mono">S2 · EP 12/24</span>
+    </div>
+    <div class="cta-row">
+      <button class="btn btn-primary" onclick="goWatch('Iron Requiem')">▶ Play Episode 12</button>
+      <button class="btn btn-ghost">+ My List</button>
+    </div>
+  </div>
+</header>
+
+<section class="section" id="catalog">
+  <div class="section-head">
+    <span class="section-title display">Continue Watching</span>
+    <span class="section-sub mono">3 IN PROGRESS</span>
+  </div>
+  <div class="shelf" id="shelf-continue"></div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <span class="section-title display">Trending This Week</span>
+    <span class="section-sub mono">RANKED BY WATCH HOURS</span>
+  </div>
+  <div class="shelf" id="shelf-trending"></div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <span class="section-title display">New Simulcast Additions</span>
+    <span class="section-sub mono">LAST 7 DAYS</span>
+  </div>
+  <div class="shelf" id="shelf-new"></div>
+</section>
+
+<section class="section" id="schedule">
+  <div class="section-head">
+    <span class="section-title display">Weekly Broadcast Schedule</span>
+    <span class="section-sub mono">JST RELEASE TIMES</span>
+  </div>
+  <div class="sched-hint">Scroll to flip through the week <span class="arrow">→</span></div>
+  <div class="sched-rail" id="schedGrid"></div>
+</section>
+
+<footer>
+  <div class="display" style="font-size:16px;">RONIN</div>
+  <div>Placeholder catalog for demo purposes — no third-party media is streamed by this build.</div>
+</footer>
+
+
+<script>
+function cardHTML(s){
+  return `<div class="card" onclick="goWatch('${s.t}')">
+    <div class="card-art" style="--art-a:${s.a}; --art-b:${s.b};">
+      <div class="card-glyph">${s.glyph}</div>
+      <div class="card-ep mono">${s.ep}</div>
+    </div>
+    <div class="card-name">${s.t}</div>
+    <div class="card-tag">${s.tag}</div>
+  </div>`;
+}
+
+// Navigate to the dedicated watch page for a title
+function goWatch(title){
+  location.href = 'watch.html?t=' + encodeURIComponent(title);
+}
+
+async function init(){
+  let shows;
+  try{
+    shows = await fetchShows();
+  } catch(err){
+    console.error(err);
+    document.getElementById('shelf-continue').innerHTML = `<div class="mono" style="color:var(--paper-dim); font-size:12px;">Couldn't load the catalog. Check your connection and refresh.</div>`;
+    return;
+  }
+
+  if(shows.length === 0){
+    document.getElementById('shelf-continue').innerHTML = `<div class="mono" style="color:var(--paper-dim); font-size:12px;">No titles yet — add some from the admin panel.</div>`;
+    return;
+  }
+
+  document.getElementById('shelf-continue').innerHTML = shows.slice(0,4).map(cardHTML).join('');
+  document.getElementById('shelf-trending').innerHTML = [...shows].reverse().slice(0,6).map(cardHTML).join('');
+  document.getElementById('shelf-new').innerHTML = shows.slice(2,7).map(cardHTML).join('');
+
+  // Ticker
+  const tickerTimes = ["11:00 PM","11:30 PM","NOW","12:30 AM","1:00 AM","1:30 AM","2:00 AM"];
+  document.getElementById('ticker').innerHTML = shows.map((s,i)=>`
+    <div class="tick" onclick="goWatch('${s.t}')">
+      <span class="tick-time mono ${tickerTimes[i%tickerTimes.length]==='NOW'?'now':''}">${tickerTimes[i%tickerTimes.length]}</span>
+      <div><div class="tick-title">${s.t}</div><div class="tick-ep mono">${s.ep}</div></div>
+    </div>`).join('');
+
+  // Schedule rail
+  const days = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"];
+  const todayIdx = 4; // Friday, for demo
+  document.getElementById('schedGrid').innerHTML = days.map((d,i)=>{
+    const s = shows[i % shows.length];
+    const isToday = i === todayIdx;
+    const hasShow = i % 2 === 0 || isToday; // sparser week, more realistic
+    if(!hasShow){
+      return `<div class="day-card">
+        <div class="day-card-head"><span class="day-card-name mono">${d.slice(0,3)}</span></div>
+        <div class="day-card-empty mono">NO RELEASE</div>
+      </div>`;
+    }
+    return `<div class="day-card ${isToday?'today':''}" onclick="goWatch('${s.t}')">
+      <div class="day-card-head">
+        <span class="day-card-name mono">${isToday? d : d.slice(0,3)}</span>
+        <span class="day-card-count mono">${isToday?'AIRING TODAY':'1 EP'}</span>
+      </div>
+      <div class="day-card-art" style="--art-a:${s.a}; --art-b:${s.b};">
+        <div class="day-card-glyph">${s.glyph}</div>
+        <div class="day-card-time mono">${(18+i)%24}:00 JST</div>
+      </div>
+      <div class="day-card-body">
+        <div class="day-card-title">${s.t}</div>
+        <div class="day-card-tag">${s.ep}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// If signed in, avatar goes to profile instead of login
+if(sessionStorage.getItem('ronin_session')){
+  document.getElementById('navAvatarLink').setAttribute('href', 'profile.html');
+}
+
+init();
+</script>
+</body>
+</html>

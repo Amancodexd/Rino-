@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create your account — Ronin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Expanded:wght@700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F1016; --panel:#181A24; --panel-hi:#22242F; --line:#2C2E3A;
+    --paper:#F1EFE9; --paper-dim:#9C9CAA; --magenta:#FF3D7F; --cyan:#3FE0C5; --amber:#FFB84D; --radius:2px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--ink); color:var(--paper); font-family:'Inter',sans-serif;
+    min-height:100vh; display:flex; -webkit-font-smoothing:antialiased;
+  }
+  .display{ font-family:'Archivo Expanded', sans-serif; font-weight:800; }
+  .mono{ font-family:'IBM Plex Mono', monospace; letter-spacing:0.02em; }
+  a{ color:inherit; }
+  ::selection{ background:var(--magenta); color:var(--ink); }
+  a:focus-visible, button:focus-visible, input:focus-visible{ outline:2px solid var(--cyan); outline-offset:2px; }
+
+  .visual{
+    flex:1.1; position:relative; display:none;
+    background:
+      radial-gradient(ellipse at 75% 20%, rgba(63,224,197,0.22), transparent 45%),
+      radial-gradient(ellipse at 20% 75%, rgba(255,61,127,0.16), transparent 40%),
+      linear-gradient(135deg, #14212a 0%, #14161f 55%, #0f1016 100%);
+    padding:48px;
+    flex-direction:column; justify-content:space-between;
+  }
+  @media (min-width:860px){ .visual{ display:flex; } }
+  .visual-logo{ display:flex; align-items:center; gap:10px; font-size:20px; }
+  .logo-mark{ width:13px; height:13px; background:var(--magenta); clip-path:polygon(0 0, 100% 50%, 0 100%); }
+  .visual-quote{ max-width:380px; }
+  .visual-quote .line{ font-size:34px; line-height:1.15; margin-bottom:14px; }
+  .visual-quote .sub{ font-size:13px; color:var(--paper-dim); margin-bottom:22px; }
+  .perks{ display:flex; flex-direction:column; gap:12px; }
+  .perk{ display:flex; align-items:center; gap:10px; font-size:13px; color:var(--paper-dim); }
+  .perk .dot{ width:6px; height:6px; background:var(--cyan); border-radius:50%; flex-shrink:0; }
+
+  .form-side{
+    flex:1; display:flex; align-items:center; justify-content:center; padding:40px 24px;
+  }
+  .form-wrap{ width:100%; max-width:360px; }
+  .form-eyebrow{ font-size:11px; color:var(--paper-dim); margin-bottom:8px; }
+  .form-title{ font-size:30px; margin-bottom:26px; }
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:12px; color:var(--paper-dim); margin-bottom:6px; }
+  .field input{
+    width:100%; background:var(--panel); border:1px solid var(--line); color:var(--paper);
+    padding:13px 14px; font-size:14px; border-radius:var(--radius); font-family:inherit;
+  }
+  .field input:focus{ border-color:var(--cyan); outline:none; }
+  .field-hint{ font-size:11px; color:var(--paper-dim); margin-top:5px; }
+  .field-hint.bad{ color:var(--magenta); }
+  .field-hint.good{ color:var(--cyan); }
+
+  .strength{ display:flex; gap:4px; margin-top:8px; }
+  .strength div{ height:3px; flex:1; background:var(--line); border-radius:2px; transition:background .15s ease; }
+  .strength.w-1 div:nth-child(1){ background:var(--magenta); }
+  .strength.w-2 div:nth-child(-n+2){ background:var(--amber); }
+  .strength.w-3 div:nth-child(-n+3){ background:var(--cyan); }
+
+  .check-row{ display:flex; align-items:flex-start; gap:8px; font-size:12px; color:var(--paper-dim); margin:20px 0 22px; line-height:1.5; }
+  .check-row input{ margin-top:2px; }
+  .check-row a{ color:var(--cyan); }
+
+  .btn-primary{
+    width:100%; padding:14px; background:var(--paper); color:var(--ink); border:none;
+    font-size:14px; font-weight:600; border-radius:var(--radius); cursor:pointer;
+    transition:background .15s ease, transform .15s ease;
+  }
+  .btn-primary:hover{ background:#fff; transform:translateY(-1px); }
+  .btn-primary:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
+
+  .divider{ display:flex; align-items:center; gap:12px; margin:24px 0; font-size:11px; color:var(--paper-dim); }
+  .divider::before, .divider::after{ content:""; flex:1; height:1px; background:var(--line); }
+
+  .oauth{ display:flex; gap:10px; }
+  .oauth button{
+    flex:1; padding:11px; background:var(--panel); border:1px solid var(--line); color:var(--paper);
+    font-size:13px; border-radius:var(--radius); cursor:pointer; font-family:inherit;
+  }
+  .oauth button:hover{ background:var(--panel-hi); }
+
+  .switch{ margin-top:28px; font-size:13px; color:var(--paper-dim); text-align:center; }
+  .switch a{ color:var(--cyan); }
+
+  .err{
+    display:none; background:rgba(255,61,127,0.1); border:1px solid var(--magenta);
+    color:#ff9dbd; font-size:12px; padding:10px 12px; border-radius:var(--radius); margin-bottom:16px;
+  }
+  .err.show{ display:block; }
+</style>
+</head>
+<body>
+
+  <div class="visual">
+    <div class="visual-logo"><span class="logo-mark"></span><span class="display">RONIN</span></div>
+    <div class="visual-quote">
+      <div class="line display">Start your queue.</div>
+      <div class="sub">One account, every device, every simulcast tracked automatically.</div>
+      <div class="perks">
+        <div class="perk"><span class="dot"></span> Continue watching syncs across devices</div>
+        <div class="perk"><span class="dot"></span> Get notified the moment a new episode airs</div>
+        <div class="perk"><span class="dot"></span> Free plan, no card required</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-side">
+    <div class="form-wrap">
+      <div class="form-eyebrow mono">JOIN RONIN</div>
+      <div class="form-title display">Create your account</div>
+
+      <div class="err" id="formErr"></div>
+
+      <form id="signupForm" onsubmit="return handleSignup(event)" novalidate>
+        <div class="field">
+          <label for="name">Display name</label>
+          <input type="text" id="name" placeholder="What should we call you?" required minlength="2">
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="you@example.com" required>
+          <div class="field-hint" id="emailHint"></div>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="At least 8 characters" required minlength="8" oninput="checkStrength()">
+          <div class="strength" id="strengthBar"><div></div><div></div><div></div></div>
+          <div class="field-hint" id="strengthHint">Use 8+ characters with a number for a stronger password.</div>
+        </div>
+        <div class="field">
+          <label for="confirm">Confirm password</label>
+          <input type="password" id="confirm" placeholder="Type it again" required oninput="checkMatch()">
+          <div class="field-hint" id="matchHint"></div>
+        </div>
+
+        <label class="check-row">
+          <input type="checkbox" id="terms" required>
+          <span>I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>. This is a demo account — no real content is stored.</span>
+        </label>
+
+        <button type="submit" class="btn-primary" id="submitBtn">Create account</button>
+      </form>
+
+      <div class="divider">OR CONTINUE WITH</div>
+      <div class="oauth">
+        <button type="button">Google</button>
+        <button type="button">Apple</button>
+      </div>
+
+      <div class="switch">Already have an account? <a href="login.html">Sign in</a></div>
+    </div>
+  </div>
+
+<script>
+  // Demo-only account creation: validates client-side and writes a fake
+  // session + a local "users" table to localStorage. No real backend yet —
+  // see the note in chat about wiring this to a real auth service.
+
+  function checkStrength(){
+    const val = document.getElementById('password').value;
+    let score = 0;
+    if(val.length >= 8) score++;
+    if(/[0-9]/.test(val)) score++;
+    if(/[A-Z]/.test(val) && /[a-z]/.test(val)) score++;
+    const bar = document.getElementById('strengthBar');
+    bar.className = 'strength' + (score > 0 ? ' w-' + score : '');
+    const hint = document.getElementById('strengthHint');
+    if(val.length === 0){ hint.textContent = 'Use 8+ characters with a number for a stronger password.'; hint.className='field-hint'; }
+    else if(score <= 1){ hint.textContent = 'Weak — try adding a number or capital letter.'; hint.className='field-hint bad'; }
+    else if(score === 2){ hint.textContent = 'Getting there.'; hint.className='field-hint'; }
+    else { hint.textContent = 'Strong password.'; hint.className='field-hint good'; }
+  }
+
+  function checkMatch(){
+    const pw = document.getElementById('password').value;
+    const cf = document.getElementById('confirm').value;
+    const hint = document.getElementById('matchHint');
+    if(cf.length === 0){ hint.textContent=''; return; }
+    if(pw === cf){ hint.textContent = 'Passwords match.'; hint.className = 'field-hint good'; }
+    else { hint.textContent = "Passwords don't match yet."; hint.className = 'field-hint bad'; }
+  }
+
+  function handleSignup(e){
+    e.preventDefault();
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    const password = document.getElementById('password').value;
+    const confirm = document.getElementById('confirm').value;
+    const terms = document.getElementById('terms').checked;
+    const err = document.getElementById('formErr');
+
+    const showErr = (msg) => { err.textContent = msg; err.classList.add('show'); };
+    err.classList.remove('show');
+
+    if(name.length < 2) return showErr('Enter a display name.'), false;
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showErr('Enter a valid email address.'), false;
+    if(password.length < 8) return showErr('Password must be at least 8 characters.'), false;
+    if(password !== confirm) return showErr("Passwords don't match."), false;
+    if(!terms) return showErr('You need to accept the Terms to continue.'), false;
+
+    // Check for existing account (demo-only, localStorage)
+    const users = JSON.parse(localStorage.getItem('ronin_users') || '{}');
+    if(users[email]) return showErr('An account with that email already exists — try signing in instead.'), false;
+
+    users[email] = { name, email, createdAt: Date.now() };
+    localStorage.setItem('ronin_users', JSON.stringify(users));
+
+    const session = { email, name, signedInAt: Date.now() };
+    sessionStorage.setItem('ronin_session', JSON.stringify(session));
+
+    window.location.href = 'profile.html';
+    return false;
+  }
+</script>
+</body>
+</html>
