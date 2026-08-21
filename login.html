@@ -83,6 +83,8 @@
   }
   .err.show{ display:block; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="supabaseClient.js"></script>
 </head>
 <body>
 
@@ -128,37 +130,37 @@
   </div>
 
 <script>
-  // Demo-only auth: checks against accounts created on the signup page
-  // (localStorage). If no accounts exist yet, falls back to accepting any
-  // 6+ character password so the flow still works standalone.
-  function handleLogin(e){
+  async function handleLogin(e){
     e.preventDefault();
     const email = document.getElementById('email').value.trim().toLowerCase();
     const password = document.getElementById('password').value;
     const err = document.getElementById('formErr');
+    const btn = document.querySelector('#loginForm button[type=submit]');
 
-    if(password.length < 6){
-      err.textContent = 'Password must be at least 6 characters.';
-      err.classList.add('show');
-      return false;
-    }
-
-    const users = JSON.parse(localStorage.getItem('ronin_users') || '{}');
-    const hasAnyUsers = Object.keys(users).length > 0;
-
-    if(hasAnyUsers && !users[email]){
-      err.textContent = "That email and password don't match an account.";
-      err.classList.add('show');
-      return false;
-    }
     err.classList.remove('show');
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
 
-    const name = users[email] ? users[email].name : email.split('@')[0];
-    const session = { email, name, signedInAt: Date.now() };
-    sessionStorage.setItem('ronin_session', JSON.stringify(session));
-    window.location.href = 'profile.html';
+    try{
+      await signInUser(email, password);
+      window.location.href = 'profile.html';
+    } catch(ex){
+      console.error(ex);
+      err.textContent = ex.message === 'Invalid login credentials'
+        ? "That email and password don't match an account."
+        : ex.message;
+      err.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Sign in';
+    }
     return false;
   }
+
+  // If already signed in, skip straight to the profile page
+  (async () => {
+    const session = await getCurrentSession();
+    if(session) window.location.href = 'profile.html';
+  })();
 </script>
 </body>
 </html>

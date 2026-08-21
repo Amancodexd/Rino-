@@ -120,6 +120,7 @@
   .not-found{ text-align:center; padding:100px 20px; color:var(--paper-dim); }
   .not-found .big{ font-size:22px; color:var(--paper); margin-bottom:10px; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="supabaseClient.js"></script>
 </head>
 <body>
@@ -244,24 +245,24 @@ function togglePlay(){
   }
 }
 
-function addToList(){
-  const raw = sessionStorage.getItem('ronin_session');
-  if(!raw){
+async function addToList(){
+  const session = await getCurrentSession();
+  if(!session){
     alert('Sign in to add titles to your list.');
     location.href = 'login.html';
     return;
   }
-  const session = JSON.parse(raw);
-  const listKey = 'ronin_list_' + session.email;
+  const listKey = 'ronin_list_' + session.user.email;
   const myList = JSON.parse(localStorage.getItem(listKey) || '{}');
   myList[show.t] = myList[show.t] || 'Plan to Watch';
   localStorage.setItem(listKey, JSON.stringify(myList));
   alert(`Added "${show.t}" to your list (${myList[show.t]}).`);
 }
 
-if(sessionStorage.getItem('ronin_session')){
-  document.getElementById('navAvatarLink').setAttribute('href', 'profile.html');
-}
+(async () => {
+  const session = await getCurrentSession();
+  if(session) document.getElementById('navAvatarLink').setAttribute('href', 'profile.html');
+})();
 
 init();
 </script>

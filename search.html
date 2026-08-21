@@ -90,6 +90,7 @@
   .empty-state .sug{ font-size:13px; margin-top:18px; }
   .empty-state .sug a{ color:var(--cyan); cursor:pointer; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="supabaseClient.js"></script>
 </head>
 <body>
@@ -209,9 +210,10 @@ function selectGenre(g){
 
 document.getElementById('searchInput').addEventListener('input', runSearch);
 
-if(sessionStorage.getItem('ronin_session')){
-  document.getElementById('navAvatarLink').setAttribute('href', 'profile.html');
-}
+(async () => {
+  const session = await getCurrentSession();
+  if(session) document.getElementById('navAvatarLink').setAttribute('href', 'profile.html');
+})();
 
 async function init(){
   document.getElementById('resultsMeta').textContent = 'Loading catalog…';

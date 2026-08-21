@@ -286,6 +286,7 @@
   }
   .ep-chip.active{ border-color:var(--cyan); color:var(--paper); }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="supabaseClient.js"></script>
 </head>
 <body>
@@ -441,9 +442,10 @@ async function init(){
 }
 
 // If signed in, avatar goes to profile instead of login
-if(sessionStorage.getItem('ronin_session')){
-  document.getElementById('navAvatarLink').setAttribute('href', 'profile.html');
-}
+(async () => {
+  const session = await getCurrentSession();
+  if(session) document.getElementById('navAvatarLink').setAttribute('href', 'profile.html');
+})();
 
 init();
 </script>

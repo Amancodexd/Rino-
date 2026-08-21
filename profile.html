@@ -171,6 +171,7 @@
     font-size:14px; font-weight:600; border-radius:var(--radius); cursor:pointer;
   }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="supabaseClient.js"></script>
 </head>
 <body>
@@ -178,24 +179,27 @@
 <div id="app"></div>
 
 <script>
-  const raw = sessionStorage.getItem('ronin_session');
+  (async () => {
+    const session = await getCurrentSession();
+    if(!session){
+      document.getElementById('app').innerHTML = `
+        <div class="locked">
+          <div class="display" style="font-size:26px;">You're not signed in</div>
+          <div style="color:var(--paper-dim); font-size:14px; max-width:360px;">Sign in to see your watch history, continue-watching progress, and account settings.</div>
+          <a href="login.html"><button class="btn-primary">Go to sign in</button></a>
+        </div>`;
+      return;
+    }
+    initProfile(session);
+  })();
 
-  if(!raw){
-    document.getElementById('app').innerHTML = `
-      <div class="locked">
-        <div class="display" style="font-size:26px;">You're not signed in</div>
-        <div style="color:var(--paper-dim); font-size:14px; max-width:360px;">Sign in to see your watch history, continue-watching progress, and account settings.</div>
-        <a href="login.html"><button class="btn-primary">Go to sign in</button></a>
-      </div>`;
-  } else {
-    initProfile();
-  }
-
-  async function initProfile(){
-    const session = JSON.parse(raw);
-    const initial = session.name.charAt(0).toUpperCase();
-
+  async function initProfile(authSession){
     document.getElementById('app').innerHTML = `<div style="padding:100px 40px; text-align:center; color:var(--paper-dim);">Loading…</div>`;
+
+    const profile = await getCurrentProfile();
+    const email = authSession.user.email;
+    const displayName = (profile && profile.name) || email.split('@')[0];
+    const initial = displayName.charAt(0).toUpperCase();
 
     // Full catalog, shared across the app — used to populate the "Add title" picker
     let catalog;
@@ -215,7 +219,7 @@
     ];
 
     const statuses = ["Watching", "Plan to Watch", "On Hold", "Completed", "Dropped"];
-    const listKey = 'ronin_list_' + session.email;
+    const listKey = 'ronin_list_' + email;
     let myList = JSON.parse(localStorage.getItem(listKey) || 'null');
     if(myList === null){
       // First visit for this account — seed a few entries so the section isn't empty
@@ -302,6 +306,7 @@
           <a href="index.html">Home</a>
           <a href="index.html#schedule">Schedule</a>
           <a href="index.html#catalog">Browse</a>
+          ${profile && profile.is_admin ? '<a href="admin.html">Admin</a>' : ''}
         </div>
         <button class="signout" onclick="signOut()">Sign out</button>
       </nav>
@@ -309,11 +314,11 @@
       <div class="header-block">
         <div class="avatar-big">${initial}</div>
         <div>
-          <div class="who-name display">${session.name}</div>
-          <div class="who-email mono">${session.email}</div>
+          <div class="who-name display">${displayName}</div>
+          <div class="who-email mono">${email}</div>
           <div class="who-tags">
-            <span class="tag">Free plan</span>
-            <span class="tag">Member since demo</span>
+            <span class="tag">${profile && profile.is_admin ? 'Admin' : 'Free plan'}</span>
+            <span class="tag">Member since ${new Date(authSession.user.created_at).toLocaleDateString('en-US', {month:'short', year:'numeric'})}</span>
           </div>
         </div>
       </div>
@@ -384,8 +389,8 @@
     renderListSection();
   }
 
-  function signOut(){
-    sessionStorage.removeItem('ronin_session');
+  async function signOut(){
+    await signOutUser();
     window.location.href = 'login.html';
   }
 </script>

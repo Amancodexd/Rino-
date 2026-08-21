@@ -91,7 +91,7 @@
   </div>
 </nav>
 
-<div class="wrap">
+<div class="wrap" id="adminWrap">
   <div class="page-title display">Admin · Add a Title</div>
   <div class="page-sub mono">Writes directly to the shared RINO catalog — visible to every visitor immediately.</div>
 
@@ -171,8 +171,24 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="supabaseClient.js"></script>
 <script>
+(async () => {
+  const session = await getCurrentSession();
+  const profile = session ? await getCurrentProfile() : null;
+
+  if(!profile || !profile.is_admin){
+    document.getElementById('adminWrap').innerHTML = `
+      <div class="page-title display">Admin · Add a Title</div>
+      <div class="page-sub mono" style="margin-bottom:20px;">
+        ${!session ? "Sign in with an admin account to manage the catalog." : "Your account doesn't have admin access."}
+      </div>
+      ${!session ? `<a href="login.html"><button class="submit-btn" style="width:auto; padding:12px 22px;">Sign in</button></a>` : ''}
+    `;
+    return;
+  }
+
   const fields = ['fTitle','fTag','fGenre','fDesc','fEpisodes','fRating','fGlyph','fColorA','fColorB'];
 
   function updatePreview(){
@@ -241,7 +257,7 @@
       loadCatalogList();
     } catch(err){
       console.error(err);
-      statusEl.textContent = "Couldn't add that title — it may already exist, or check your connection.";
+      statusEl.textContent = "Couldn't add that title — check your connection, or your admin session may have expired.";
       statusEl.className = 'status-msg show err';
     } finally {
       btn.disabled = false;
@@ -250,6 +266,7 @@
   });
 
   loadCatalogList();
+})();
 </script>
 </body>
 </html>
