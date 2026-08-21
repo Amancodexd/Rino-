@@ -18,6 +18,7 @@ async function fetchShows(){
     .order('created_at', { ascending: true });
   if(error) throw error;
   return data.map(r => ({
+    id: r.id,
     t: r.title,
     tag: r.genre,   // DB "genre" holds the descriptive label shown under the title
     genre: r.tag,   // DB "tag" holds the short category used for search filter chips
@@ -91,4 +92,72 @@ async function getCurrentProfile(){
     .single();
   if(error) return null;
   return data;
+}
+
+// ---------- Likes ----------
+
+// Returns { count, likedByMe } for a show.
+async function getLikeStats(showId){
+  const [{ count, error: countErr }, session] = await Promise.all([
+    sb.from('show_likes').select('*', { count: 'exact', head: true }).eq('show_id', showId),
+    getCurrentSession()
+  ]);
+  if(countErr) throw countErr;
+
+  let likedByMe = false;
+  if(session){
+    const { data } = await sb.from('show_likes').select('show_id').eq('show_id', showId).eq('user_id', session.user.id).maybeSingle();
+    likedByMe = !!data;
+  }
+  return { count: count || 0, likedByMe };
+}
+
+// Toggles the current user's like on a show. Returns the new { count, likedByMe }.
+async function toggleLike(showId){
+  const session = await getCurrentSession();
+  if(!session) throw new Error('Sign in to like a title.');
+
+  const { data: existing } = await sb.from('show_likes').select('show_id').eq('show_id', showId).eq('user_id', session.user.id).maybeSingle();
+
+  if(existing){
+    const { error } = await sb.from('show_likes').delete().eq('show_id', showId).eq('user_id', session.user.id);
+    if(error) throw error;
+  } else {
+    const { error } = await sb.from('show_likes').insert({ show_id: showId, user_id: session.user.id });
+    if(error) throw error;
+  }
+  return getLikeStats(showId);
+}
+
+// ---------- Comments / feedback ----------
+
+async function getComments(showId){
+  const { data, error } = await sb
+    .from('show_comments')
+    .select('id, name, body, created_at, user_id')
+    .eq('show_id', showId)
+    .order('created_at', { ascending: false });
+  if(error) throw error;
+  return data;
+}
+
+async function postComment(showId, body){
+  const session = await getCurrentSession();
+  if(!session) throw new Error('Sign in to leave feedback.');
+  const profile = await getCurrentProfile();
+  const name = (profile && profile.name) || session.user.email.split('@')[0];
+
+  const { data, error } = await sb.from('show_comments').insert({
+    show_id: showId,
+    user_id: session.user.id,
+    name,
+    body
+  }).select().single();
+  if(error) throw error;
+  return data;
+}
+
+async function deleteComment(commentId){
+  const { error } = await sb.from('show_comments').delete().eq('id', commentId);
+  if(error) throw error;
 }

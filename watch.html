@@ -31,13 +31,17 @@
   .avatar{ width:30px; height:30px; background:var(--cyan); border-radius:50%; }
 
   /* Player */
+  .player-outer{ max-width:1100px; margin:0 auto; padding:24px 40px 0; }
   .player-wrap{
     background:#000;
     display:flex; align-items:center; justify-content:center;
     position:relative;
     aspect-ratio:16/9;
     max-height:72vh;
+    border-radius:var(--radius);
+    overflow:hidden;
   }
+  .player-wrap:fullscreen{ max-height:none; border-radius:0; }
   .player-art{
     position:absolute; inset:0;
     background:linear-gradient(155deg, var(--a), var(--b));
@@ -60,10 +64,28 @@
   }
 
   .scrubber{
-    position:absolute; bottom:0; left:0; right:0; z-index:2;
-    height:4px; background:rgba(255,255,255,0.15);
+    position:absolute; bottom:36px; left:0; right:0; z-index:2;
+    height:4px; background:rgba(255,255,255,0.15); cursor:pointer;
   }
   .scrubber-fill{ height:100%; width:0%; background:var(--magenta); transition:width .3s linear; }
+
+  /* Control bar under the player */
+  .player-controls{
+    position:absolute; bottom:0; left:0; right:0; z-index:3;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:6px 12px; background:linear-gradient(to top, rgba(0,0,0,0.75), transparent);
+  }
+  .ctrl-left, .ctrl-right{ display:flex; align-items:center; gap:8px; }
+  .ctrl-btn{
+    background:transparent; border:none; color:var(--paper); cursor:pointer;
+    font-family:inherit; font-size:12px; padding:6px 8px; border-radius:var(--radius);
+    display:flex; align-items:center; gap:4px;
+  }
+  .ctrl-btn:hover{ background:rgba(255,255,255,0.12); }
+  .ctrl-select{
+    background:rgba(15,16,22,0.7); color:var(--paper); border:1px solid rgba(255,255,255,0.2);
+    font-family:'IBM Plex Mono', monospace; font-size:11px; padding:6px 8px; border-radius:var(--radius); cursor:pointer;
+  }
 
   /* Info row */
   .watch-body{ max-width:1100px; margin:0 auto; padding:28px 40px 60px; }
@@ -119,6 +141,46 @@
 
   .not-found{ text-align:center; padding:100px 20px; color:var(--paper-dim); }
   .not-found .big{ font-size:22px; color:var(--paper); margin-bottom:10px; }
+
+  /* Like button */
+  .like-btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:11px 18px; font-size:13px; font-weight:600;
+    border-radius:var(--radius); cursor:pointer; border:1px solid var(--line);
+    background:var(--panel); color:var(--paper);
+  }
+  .like-btn:hover{ background:var(--panel-hi); }
+  .like-btn.liked{ border-color:var(--magenta); color:var(--magenta); }
+  .like-btn .heart{ transition:transform .15s ease; }
+  .like-btn.liked .heart{ transform:scale(1.15); }
+
+  /* Comments / feedback */
+  .comment-form{ display:flex; gap:10px; margin-bottom:20px; }
+  .comment-form textarea{
+    flex:1; background:var(--panel); border:1px solid var(--line); color:var(--paper);
+    font-family:inherit; font-size:13px; padding:10px 12px; border-radius:var(--radius); resize:vertical; min-height:44px;
+  }
+  .comment-form button{
+    flex-shrink:0; padding:0 18px; background:var(--paper); color:var(--ink); border:none;
+    border-radius:var(--radius); cursor:pointer; font-family:inherit; font-weight:600; font-size:13px;
+  }
+  .comment-form button:hover{ background:#fff; }
+  .comment-form button:disabled{ opacity:0.5; cursor:default; }
+  .comment-signin{ font-size:13px; color:var(--paper-dim); margin-bottom:20px; }
+  .comment-signin a{ color:var(--cyan); }
+  .comment-list{ display:flex; flex-direction:column; gap:14px; }
+  .comment-row{ display:flex; gap:12px; }
+  .comment-avatar{
+    width:32px; height:32px; border-radius:50%; flex-shrink:0;
+    background:var(--cyan); display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:700; color:var(--ink);
+  }
+  .comment-body{ flex:1; min-width:0; }
+  .comment-head{ display:flex; align-items:center; gap:8px; margin-bottom:3px; }
+  .comment-name{ font-size:13px; font-weight:600; }
+  .comment-time{ font-size:11px; color:var(--paper-dim); }
+  .comment-text{ font-size:13px; color:var(--paper-dim); line-height:1.6; }
+  .comment-empty{ font-size:13px; color:var(--paper-dim); }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="supabaseClient.js"></script>
@@ -168,11 +230,31 @@ function relatedShelf(){
 
 function render(){
   document.getElementById('app').innerHTML = `
-    <div class="player-wrap" id="playerWrap" style="--a:${show.a}; --b:${show.b};">
-      <div class="player-art"></div>
-      <div class="ep-badge-onplayer mono">EP ${currentEp}</div>
-      <div class="play-ring" id="playRing" onclick="togglePlay()">▶</div>
-      <div class="scrubber"><div class="scrubber-fill" id="scrubberFill"></div></div>
+    <div class="player-outer">
+      <div class="player-wrap" id="playerWrap" style="--a:${show.a}; --b:${show.b};">
+        <div class="player-art"></div>
+        <div class="ep-badge-onplayer mono">EP ${currentEp}</div>
+        <div class="play-ring" id="playRing" onclick="togglePlay()">▶</div>
+        <div class="scrubber" id="scrubberTrack" onclick="seek(event)"><div class="scrubber-fill" id="scrubberFill"></div></div>
+        <div class="player-controls">
+          <div class="ctrl-left">
+            <button class="ctrl-btn" onclick="togglePlay()" id="ctrlPlayBtn">▶ Play</button>
+          </div>
+          <div class="ctrl-right">
+            <select class="ctrl-select" id="speedSelect" onchange="setSpeed(this.value)" title="Playback speed">
+              <option value="1">1x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2">2x</option>
+            </select>
+            <select class="ctrl-select" id="qualitySelect" title="Quality">
+              <option value="1080p">1080p</option>
+              <option value="720p">720p</option>
+              <option value="480p">480p</option>
+            </select>
+            <button class="ctrl-btn" onclick="toggleFullscreen()" id="fsBtn">⛶ Fullscreen</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="watch-body">
@@ -189,6 +271,10 @@ function render(){
         </div>
         <div class="action-col">
           <button class="btn btn-primary" onclick="togglePlay()">▶ Play</button>
+          <button class="like-btn" id="likeBtn" onclick="handleLikeClick()">
+            <span class="heart" id="likeHeart">♡</span>
+            <span id="likeCount">…</span>
+          </button>
           <button class="btn" onclick="addToList()">+ My List</button>
         </div>
       </div>
@@ -196,11 +282,146 @@ function render(){
       <div class="section-title display">Episodes</div>
       <div class="ep-list">${epList()}</div>
 
+      <div class="section-title display">Feedback</div>
+      <div id="commentsArea">
+        <div class="comment-signin mono">Loading feedback…</div>
+      </div>
+
       <div class="section-title display">You might also like</div>
       <div class="rel-shelf">${relatedShelf()}</div>
     </div>
   `;
+
+  loadLikes();
+  loadComments();
+
+  const savedSpeed = sessionStorage.getItem('ronin_speed');
+  if(savedSpeed) document.getElementById('speedSelect').value = savedSpeed;
 }
+
+async function loadLikes(){
+  try{
+    const { count, likedByMe } = await getLikeStats(show.id);
+    document.getElementById('likeCount').textContent = count;
+    document.getElementById('likeHeart').textContent = likedByMe ? '♥' : '♡';
+    document.getElementById('likeBtn').classList.toggle('liked', likedByMe);
+  } catch(err){
+    console.error(err);
+    document.getElementById('likeCount').textContent = '0';
+  }
+}
+
+async function handleLikeClick(){
+  const session = await getCurrentSession();
+  if(!session){
+    alert('Sign in to like a title.');
+    location.href = 'login.html';
+    return;
+  }
+  const btn = document.getElementById('likeBtn');
+  btn.style.pointerEvents = 'none';
+  try{
+    const { count, likedByMe } = await toggleLike(show.id);
+    document.getElementById('likeCount').textContent = count;
+    document.getElementById('likeHeart').textContent = likedByMe ? '♥' : '♡';
+    btn.classList.toggle('liked', likedByMe);
+  } catch(err){
+    console.error(err);
+  } finally {
+    btn.style.pointerEvents = '';
+  }
+}
+
+function timeAgo(iso){
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if(mins < 1) return 'just now';
+  if(mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if(hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+async function loadComments(){
+  const area = document.getElementById('commentsArea');
+  let comments;
+  try{
+    comments = await getComments(show.id);
+  } catch(err){
+    console.error(err);
+    area.innerHTML = `<div class="comment-signin mono">Couldn't load feedback.</div>`;
+    return;
+  }
+
+  const session = await getCurrentSession();
+
+  const formHTML = session
+    ? `<div class="comment-form">
+        <textarea id="commentInput" maxlength="500" placeholder="Share your thoughts on this title…"></textarea>
+        <button onclick="submitComment()">Post</button>
+      </div>`
+    : `<div class="comment-signin mono">Sign in to leave feedback — <a href="login.html">sign in</a></div>`;
+
+  const listHTML = comments.length === 0
+    ? `<div class="comment-empty">No feedback yet. Be the first to say something.</div>`
+    : `<div class="comment-list">${comments.map(c => `
+        <div class="comment-row">
+          <div class="comment-avatar">${c.name.charAt(0).toUpperCase()}</div>
+          <div class="comment-body">
+            <div class="comment-head">
+              <span class="comment-name">${c.name}</span>
+              <span class="comment-time mono">${timeAgo(c.created_at)}</span>
+            </div>
+            <div class="comment-text">${c.body}</div>
+          </div>
+        </div>
+      `).join('')}</div>`;
+
+  area.innerHTML = formHTML + listHTML;
+}
+
+async function submitComment(){
+  const input = document.getElementById('commentInput');
+  const body = input.value.trim();
+  if(!body) return;
+  input.disabled = true;
+  try{
+    await postComment(show.id, body);
+    await loadComments();
+  } catch(err){
+    console.error(err);
+    alert("Couldn't post your feedback. Try again.");
+    input.disabled = false;
+  }
+}
+
+function seek(e){
+  if(!playing) return;
+  const rect = document.getElementById('scrubberTrack').getBoundingClientRect();
+  const pct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+  document.getElementById('scrubberFill').style.width = pct + '%';
+}
+
+function setSpeed(val){
+  // Playback speed control — applies once real video is wired in;
+  // stored here so the choice persists across the session.
+  sessionStorage.setItem('ronin_speed', val);
+}
+
+function toggleFullscreen(){
+  const el = document.getElementById('playerWrap');
+  if(!document.fullscreenElement){
+    (el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen).call(el);
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen).call(document);
+  }
+}
+
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.getElementById('fsBtn');
+  if(btn) btn.textContent = document.fullscreenElement ? '⛶ Exit fullscreen' : '⛶ Fullscreen';
+});
 
 function goToEpisode(n){
   location.href = `watch.html?t=${encodeURIComponent(show.t)}&ep=${n}`;
@@ -233,6 +454,8 @@ let scrubTimer = null;
 function togglePlay(){
   playing = !playing;
   document.getElementById('playRing').textContent = playing ? '❚❚' : '▶';
+  const ctrlBtn = document.getElementById('ctrlPlayBtn');
+  if(ctrlBtn) ctrlBtn.textContent = playing ? '❚❚ Pause' : '▶ Play';
   if(playing){
     let pct = 0;
     scrubTimer = setInterval(() => {
